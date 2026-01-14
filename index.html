@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deepansha's Discipline</title>
+    <style>
+        :root {
+            --bg: #000; --card: #111; --text: #fff; --accent: #fff;
+            --border: #222; --dim: #666; --danger: #ff4444; --grid-dot: #1a1a1a;
+        }
+
+        [data-theme="light"] {
+            --bg: #f4f4f5; --card: #ffffff; --text: #18181b; --accent: #18181b;
+            --border: #e4e4e7; --dim: #71717a; --danger: #ef4444; --grid-dot: #d4d4d8;
+        }
+
+        body {
+            background: var(--bg); color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .container { max-width: 400px; width: 100%; }
+
+        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .theme-switch { cursor: pointer; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; }
+
+        .header { text-align: left; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
+        .player-name { font-size: 0.75rem; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
+        h1 { font-size: 2.2rem; font-weight: 800; margin: 5px 0; }
+        
+        .streak-badge { font-size: 0.8rem; font-weight: bold; color: var(--accent); margin-top: 5px; display: flex; align-items: center; gap: 5px; }
+
+        .bar-label { font-size: 0.65rem; text-transform: uppercase; margin-bottom: 5px; display: flex; justify-content: space-between; color: var(--dim); }
+        .bar-bg { background: var(--grid-dot); height: 4px; border-radius: 2px; overflow: hidden; margin-bottom: 12px; }
+        .bar-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.4s ease; }
+
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .habit-row { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .checkbox { width: 18px; height: 18px; border: 1px solid var(--dim); border-radius: 4px; margin-right: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .checkbox.checked { background: var(--accent); border-color: var(--accent); }
+        .checkbox.checked::after { content: '✓'; color: var(--bg); font-size: 11px; font-weight: bold; }
+        
+        .edit-row { display: flex; align-items: center; margin-bottom: 10px; gap: 10px; }
+        .edit-input { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px; border-radius: 6px; flex-grow: 1; font-size: 0.9rem; }
+        .btn-del { color: var(--danger); font-weight: bold; cursor: pointer; padding: 0 5px; }
+
+        .journal-area { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 12px; font-family: inherit; margin-top: 20px; box-sizing: border-box; resize: none; min-height: 80px; font-size: 0.9rem; }
+
+        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; margin-top: 20px; }
+        .dot { aspect-ratio: 1/1; background: var(--grid-dot); border-radius: 2px; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; color: var(--dim); cursor: pointer; }
+        .dot.fully-done { background: var(--accent); color: var(--bg); }
+        .dot.active { border: 2px solid var(--accent); }
+
+        .btn { width: 100%; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-bottom: 10px; border: none; font-size: 0.75rem; }
+        .btn-main { background: var(--accent); color: var(--bg); opacity: 0.3; pointer-events: none; }
+        .btn-main.ready { opacity: 1; pointer-events: auto; }
+        .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--dim); }
+        
+        #edit-panel { display: none; margin-bottom: 20px; border: 1px dashed var(--dim); padding: 15px; border-radius: 8px; }
+    </style>
+</head>
+<body data-theme="dark">
+
+<div class="container">
+    <div class="top-row">
+        <div class="streak-badge">🔥 <span id="streak-count">0</span> Day Streak</div>
+        <div class="theme-switch" onclick="toggleTheme()">Switch Theme</div>
+    </div>
+    
+    <div class="header">
+        <div class="player-name">Deepansha Garg</div>
+        <h1 id="view-title">Day 1</h1>
+    </div>
+
+    <div class="bar-container">
+        <div class="bar-label">Today <span id="daily-perc">0%</span></div>
+        <div class="bar-bg"><div id="daily-bar" class="bar-fill"></div></div>
+        <div class="bar-label">Total Volume <span id="total-perc">0%</span></div>
+        <div class="bar-bg"><div id="total-bar" class="bar-fill"></div></div>
+    </div>
+
+    <div id="edit-panel">
+        <div id="edit-list"></div>
+        <button class="btn-secondary" style="width:100%; padding: 8px; margin-top: 10px;" onclick="addHabit()">+ Add New Habit</button>
+        <button class="btn-secondary" style="width:100%; margin-top: 10px; border-color: var(--accent); color: var(--accent);" onclick="toggleEditPanel()">Save & Close</button>
+    </div>
+
+    <div class="card" id="main-card">
+        <div id="habit-list"></div>
+        <textarea id="journal-input" class="journal-area" placeholder="Journal entry..."></textarea>
+        <button id="finish-btn" class="btn btn-main" style="margin-top: 15px;" onclick="completeDay()">Complete Day</button>
+        <button id="return-btn" class="btn btn-secondary" style="display:none; margin-top: 15px;" onclick="viewToday()">Return to Present</button>
+    </div>
+
+    <div class="grid" id="dot-grid"></div>
+
+    <div style="margin-top: 25px; border-top: 1px solid var(--border); padding-top: 20px;">
+        <button class="btn btn-secondary" onclick="toggleEditPanel()">⚙️ Manage Habits</button>
+        <button class="btn btn-secondary" onclick="resetToday()">Reset Today</button>
+        <button class="btn btn-secondary" style="color: var(--danger)" onclick="fullReset()">Reset Whole Challenge</button>
+    </div>
+</div>
+
+<script>
+    let state = JSON.parse(localStorage.getItem('dg_75_final_v3')) || {
+        day: 1, totalGoal: 75, theme: 'dark',
+        habits: ["Drink 4L Water", "2x 45min Workouts", "Read 10 Pages", "Clean Diet"],
+        checks: [false, false, false, false], history: {} 
+    };
+
+    let viewingDay = state.day;
+
+    function getStreak() {
+        let streak = 0;
+        for (let i = state.day - 1; i >= 1; i--) {
+            let h = state.history[i];
+            if (h && h.checks.every(c => c)) streak++;
+            else break;
+        }
+        return streak;
+    }
+
+    function toggleEditPanel() {
+        const panel = document.getElementById('edit-panel');
+        const card = document.getElementById('main-card');
+        panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+        card.style.display = panel.style.display === 'block' ? 'none' : 'block';
+        if(panel.style.display === 'block') renderEditList();
+    }
+
+    function renderEditList() {
+        document.getElementById('edit-list').innerHTML = state.habits.map((h, i) => `
+            <div class="edit-row">
+                <input class="edit-input" value="${h}" onchange="renameHabit(${i}, this.value)">
+                <span class="btn-del" onclick="deleteHabit(${i})">×</span>
+            </div>
+        `).join('');
+    }
+
+    function renameHabit(i, val) { state.habits[i] = val; save(); }
+    function deleteHabit(i) {
+        if(confirm("Delete habit?")) {
+            state.habits.splice(i, 1); state.checks.splice(i, 1);
+            Object.keys(state.history).forEach(d => state.history[d].checks.splice(i, 1));
+            save(); renderEditList(); render();
+        }
+    }
+    function addHabit() {
+        state.habits.push("New Habit"); state.checks.push(false);
+        Object.keys(state.history).forEach(d => state.history[d].checks.push(false));
+        save(); renderEditList(); render();
+    }
+
+    function render() {
+        document.body.setAttribute('data-theme', state.theme);
+        const isHistory = viewingDay < state.day;
+        document.getElementById('view-title').innerText = "Day " + viewingDay;
+        document.getElementById('streak-count').innerText = getStreak();
+        
+        const currentChecks = isHistory ? (state.history[viewingDay]?.checks || []) : state.checks;
+        const dayDone = currentChecks.filter(c => c).length;
+        const dailyPerc = Math.round((dayDone / state.habits.length) * 100) || 0;
+        document.getElementById('daily-bar').style.width = dailyPerc + '%';
+        document.getElementById('daily-perc').innerText = dailyPerc + '%';
+
+        let totalP = state.totalGoal * state.habits.length;
+        let totalD = 0;
+        for (let i = 1; i <= state.totalGoal; i++) {
+            let chks = (i === state.day) ? state.checks : (state.history[i]?.checks || []);
+            totalD += chks.filter(c => c).length;
+        }
+        document.getElementById('total-bar').style.width = Math.round((totalD / totalP) * 100) + '%';
+        document.getElementById('total-perc').innerText = Math.round((totalD / totalP) * 100) + '%';
+
+        document.getElementById('habit-list').innerHTML = state.habits.map((h, i) => `
+            <div class="habit-row">
+                <div class="checkbox ${currentChecks[i] ? 'checked' : ''}" onclick="toggle(${i}, ${isHistory})"></div>
+                <div>${h}</div>
+            </div>
+        `).join('');
+
+        document.getElementById('journal-input').value = isHistory ? (state.history[viewingDay]?.note || "") : (state.todayNote || "");
+        document.getElementById('finish-btn').className = (dailyPerc === 100 && !isHistory) ? "btn btn-main ready" : "btn btn-main";
+        document.getElementById('finish-btn').style.display = isHistory ? "none" : "block";
+        document.getElementById('return-btn').style.display = isHistory ? "block" : "none";
+
+        const grid = document.getElementById('dot-grid');
+        grid.innerHTML = '';
+        for(let i=1; i<=state.totalGoal; i++) {
+            const d = document.createElement('div');
+            let hChks = (i === state.day) ? state.checks : (state.history[i]?.checks || []);
+            d.className = `dot ${hChks.filter(c => c).length === state.habits.length && state.habits.length > 0 ? 'fully-done' : ''} ${i === viewingDay ? 'active' : ''}`;
+            d.innerText = i;
+            d.onclick = () => { viewingDay = i; render(); };
+            grid.appendChild(d);
+        }
+    }
+
+    function toggle(i, isHistory) {
+        if (isHistory) {
+            if (!state.history[viewingDay]) state.history[viewingDay] = { checks: new Array(state.habits.length).fill(false), note: "" };
+            state.history[viewingDay].checks[i] = !state.history[viewingDay].checks[i];
+        } else state.checks[i] = !state.checks[i];
+        save(); render();
+    }
+
+    function completeDay() {
+        state.history[state.day] = { checks: [...state.checks], note: document.getElementById('journal-input').value };
+        state.day++; state.checks = state.checks.map(() => false);
+        state.todayNote = ""; viewingDay = state.day;
+        save(); render();
+    }
+
+    function resetToday() {
+        if(confirm("Reset Today?")) { state.checks = state.checks.map(() => false); state.todayNote = ""; save(); render(); }
+    }
+
+    function fullReset() {
+        if (confirm("Erase all?") && confirm("Sure?")) { localStorage.removeItem('dg_75_final_v3'); location.reload(); }
+    }
+
+    function toggleTheme() { state.theme = state.theme === 'dark' ? 'light' : 'dark'; render(); save(); }
+    function viewToday() { viewingDay = state.day; render(); }
+    function save() { localStorage.setItem('dg_75_final_v3', JSON.stringify(state)); }
+    render();
+</script>
+</body>
+</html>
